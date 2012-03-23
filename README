@@ -1,0 +1,3 @@
+This library implements a simple, pure binding onto the date parsing
+code from git.  Why?  Because it was the only reasonable implementation
+of a generic date parser I could find.
