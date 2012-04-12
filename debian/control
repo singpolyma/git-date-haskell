@@ -1,0 +1,67 @@
+Source: haskell-git-date
+Priority: extra
+Section: haskell
+Maintainer: Stephen Paul Weber <singpolyma@singpolyma.net>
+Build-Depends: debhelper (>= 7.0),
+               haskell-devscripts (>= 0.8),
+               cdbs,
+               ghc,
+               ghc-prof,
+               libghc-utf8-string-dev,
+               libghc-utf8-string-prof
+Build-Depends-Indep: ghc-doc,
+                     libghc-utf8-string-doc
+Standards-Version: 3.9.1
+Homepage: https://github.com/singpolyma/git-date-haskell
+
+Package: libghc-git-date-dev
+Architecture: any
+Depends: ${shlibs:Depends},
+         ${haskell:Depends},
+         ${misc:Depends}
+Recommends: ${haskell:Recommends}
+Suggests: ${haskell:Suggests}
+Provides: ${haskell:Provides}
+Description: Bindings to the date parsing from Git.
+ This library implements a simple, pure binding onto the date parsing
+ code from git.  Why?  Because it was the only reasonable implementation
+ of a generic date parser I could find.
+ .
+  Author: Stephen Paul Weber <singpolyma@singpolyma.net>
+  Upstream-Maintainer: Stephen Paul Weber <singpolyma@singpolyma.net>
+ .
+ This package contains the normal library files.
+
+Package: libghc-git-date-prof
+Architecture: any
+Depends: ${haskell:Depends},
+         ${misc:Depends}
+Recommends: ${haskell:Recommends}
+Suggests: ${haskell:Suggests}
+Provides: ${haskell:Provides}
+Description: Bindings to the date parsing from Git.
+ This library implements a simple, pure binding onto the date parsing
+ code from git.  Why?  Because it was the only reasonable implementation
+ of a generic date parser I could find.
+ .
+  Author: Stephen Paul Weber <singpolyma@singpolyma.net>
+  Upstream-Maintainer: Stephen Paul Weber <singpolyma@singpolyma.net>
+ .
+ This package contains the libraries compiled with profiling enabled.
+
+Package: libghc-git-date-doc
+Architecture: all
+Section: doc
+Depends: ${haskell:Depends},
+         ${misc:Depends}
+Recommends: ${haskell:Recommends}
+Suggests: ${haskell:Suggests}
+Description: Bindings to the date parsing from Git.
+ This library implements a simple, pure binding onto the date parsing
+ code from git.  Why?  Because it was the only reasonable implementation
+ of a generic date parser I could find.
+ .
+  Author: Stephen Paul Weber <singpolyma@singpolyma.net>
+  Upstream-Maintainer: Stephen Paul Weber <singpolyma@singpolyma.net>
+ .
+ This package contains the documentation files.

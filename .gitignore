@@ -3,3 +3,10 @@
 *.swp
 report.html
 dist/*
+dist-ghc/*
+build-*-stamp
+debian/files
+debian/hlibrary.setup
+debian/libghc*
+debian/tmp*
+debian/dh_*
