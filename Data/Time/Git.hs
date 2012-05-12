@@ -1,6 +1,6 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 
-module Data.Time.Git (approxidate, approxidateUTC) where
+module Data.Time.Git (approxidate, io_approxidate, posixToUTC) where
 
 import Foreign
 import Foreign.C.Types
@@ -12,25 +12,30 @@ import Data.Time.Clock.POSIX
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.UTF8 as BS (fromString)
 
--- | Parse a date/time string and return Just a Unix timestamp.
---   Return Nothing if the string could not be interpreted.
---   If no timezone is in the string, the local timezone is used.
-approxidate :: String -> Maybe Integer
-approxidate = unsafePerformIO . io_approxidate_careful
-
--- | The same as approxidate, but returns a UTCTime instead of a raw
---   timestamp.
-approxidateUTC :: String -> Maybe UTCTime
-approxidateUTC input =
-	fmap (posixSecondsToUTCTime . realToFrac) (approxidate input)
-
 foreign import ccall unsafe "date.c approxidate_careful"
 	c_approxidate_careful ::
 	CString -> Ptr CInt ->
 	IO CULong
 
-io_approxidate_careful :: String -> IO (Maybe Integer)
-io_approxidate_careful input =
+-- | Parse a date/time string and return Just a Unix timestamp.
+--   Return Nothing if the string could not be interpreted.
+--   If no timezone is in the string, the local timezone is used.
+--   This is not in IO and you cannot safely ask it to parse strings like
+--   \"now\" and \"yesterday\".
+approxidate :: String -> Maybe Integer
+approxidate = unsafePerformIO . io_approxidate
+
+-- | Convert a Unix timestamp to a UTCTime
+posixToUTC :: Integer -> UTCTime
+posixToUTC = posixSecondsToUTCTime . realToFrac
+
+-- | Parse a date/time string and return Just a Unix timestamp.
+--   Return Nothing if the string could not be interpreted.
+--   If no timezone is in the string, the local timezone is used.
+--   This is in IO so that you can safely ask it to parse strings like
+--   \"now\" and \"yesterday\".
+io_approxidate :: String -> IO (Maybe Integer)
+io_approxidate input =
 	BS.useAsCString (BS.fromString input) (\c_input ->
 		alloca (\c_error_ret -> do
 			poke c_error_ret 0
