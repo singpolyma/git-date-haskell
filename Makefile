@@ -34,6 +34,7 @@ dist/setup-config: git-date.cabal
 
 clean:
 	find -name '*.o' -o -name '*.hi' | xargs $(RM)
+	$(RM) -r dist dist-ghc
 
 debian/control: git-date.cabal
 	cabal-debian --update-debianization
