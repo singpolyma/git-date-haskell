@@ -35,6 +35,26 @@ library
                 utf8-string,
                 time
 
+test-suite tests
+        type:       exitcode-stdio-1.0
+        main-is:    tests/suite.hs
+
+        c-sources: ext/date.c
+        include-dirs: ext
+
+        other-modules:
+                Data.Time.Git
+
+        build-depends:
+                base == 4.*,
+                bytestring,
+                utf8-string,
+                time,
+                old-locale,
+                QuickCheck >= 2.4.1.1,
+                test-framework,
+                test-framework-quickcheck2
+
 source-repository head
         type:     git
         location: git://github.com/singpolyma/git-date-haskell.git

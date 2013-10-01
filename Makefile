@@ -3,14 +3,20 @@ GHCFLAGS=-Wall -XNoCPP -fno-warn-name-shadowing -XHaskell98 -O2
 HLINTFLAGS=-XHaskell98 -XNoCPP -i 'Use camelCase' -i 'Use String' -i 'Use head' -i 'Use string literal' -i 'Use list comprehension' --utf8
 VERSION=0.2
 
-.PHONY: all shell clean doc install debian
+.PHONY: all shell clean doc install debian test
 
-all: dist/build/libHSgit-date-$(VERSION).a dist/git-date-$(VERSION).tar.gz
+all: dist/build/libHSgit-date-$(VERSION).a dist/git-date-$(VERSION).tar.gz test
 
 install: dist/build/libHSgit-date-$(VERSION).a
 	cabal install
 
 debian: debian/control
+
+test: tests/suite
+	tests/suite
+
+tests/suite: tests/suite.hs ext/date.c Data/Time/Git.hs
+	ghc --make $(GHCFLAGS) -o $@ $^
 
 shell:
 	ghci $(GHCFLAGS)
@@ -34,7 +40,7 @@ dist/setup-config: git-date.cabal
 
 clean:
 	find -name '*.o' -o -name '*.hi' | xargs $(RM)
-	$(RM) -r dist dist-ghc
+	$(RM) -r dist dist-ghc tests/suite
 
 debian/control: git-date.cabal
 	cabal-debian --update-debianization

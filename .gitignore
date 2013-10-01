@@ -10,3 +10,4 @@ debian/hlibrary.setup
 debian/libghc*
 debian/tmp*
 debian/dh_*
+tests/suite
