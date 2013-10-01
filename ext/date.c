@@ -28,6 +28,8 @@ enum date_mode {
 	DATE_UNKNOWN
 };
 
+unsigned long approxidate_careful(const char *date, int *error_ret);
+
 /*
  * This is like mktime, but without normalization of tm_wday and tm_yday.
  */
@@ -106,118 +108,6 @@ static int local_tzoffset(unsigned long time)
 	offset /= 60; /* in minutes */
 	offset = (offset % 60) + ((offset / 60) * 100);
 	return offset * eastwest;
-}
-
-const char *show_date_relative(unsigned long time, int tz,
-			       const struct timeval *now,
-			       char *timebuf,
-			       size_t timebuf_size)
-{
-	unsigned long diff;
-	if (now->tv_sec < time)
-		return "in the future";
-	diff = now->tv_sec - time;
-	if (diff < 90) {
-		snprintf(timebuf, timebuf_size, "%lu seconds ago", diff);
-		return timebuf;
-	}
-	/* Turn it into minutes */
-	diff = (diff + 30) / 60;
-	if (diff < 90) {
-		snprintf(timebuf, timebuf_size, "%lu minutes ago", diff);
-		return timebuf;
-	}
-	/* Turn it into hours */
-	diff = (diff + 30) / 60;
-	if (diff < 36) {
-		snprintf(timebuf, timebuf_size, "%lu hours ago", diff);
-		return timebuf;
-	}
-	/* We deal with number of days from here on */
-	diff = (diff + 12) / 24;
-	if (diff < 14) {
-		snprintf(timebuf, timebuf_size, "%lu days ago", diff);
-		return timebuf;
-	}
-	/* Say weeks for the past 10 weeks or so */
-	if (diff < 70) {
-		snprintf(timebuf, timebuf_size, "%lu weeks ago", (diff + 3) / 7);
-		return timebuf;
-	}
-	/* Say months for the past 12 months or so */
-	if (diff < 365) {
-		snprintf(timebuf, timebuf_size, "%lu months ago", (diff + 15) / 30);
-		return timebuf;
-	}
-	/* Give years and months for 5 years or so */
-	if (diff < 1825) {
-		unsigned long totalmonths = (diff * 12 * 2 + 365) / (365 * 2);
-		unsigned long years = totalmonths / 12;
-		unsigned long months = totalmonths % 12;
-		int n;
-		n = snprintf(timebuf, timebuf_size, "%lu year%s",
-				years, (years > 1 ? "s" : ""));
-		if (months)
-			snprintf(timebuf + n, timebuf_size - n,
-					", %lu month%s ago",
-					months, (months > 1 ? "s" : ""));
-		else
-			snprintf(timebuf + n, timebuf_size - n, " ago");
-		return timebuf;
-	}
-	/* Otherwise, just years. Centuries is probably overkill. */
-	snprintf(timebuf, timebuf_size, "%lu years ago", (diff + 183) / 365);
-	return timebuf;
-}
-
-const char *show_date(unsigned long time, int tz, enum date_mode mode)
-{
-	struct tm *tm;
-	static char timebuf[200];
-
-	if (mode == DATE_RAW) {
-		snprintf(timebuf, sizeof(timebuf), "%lu %+05d", time, tz);
-		return timebuf;
-	}
-
-	if (mode == DATE_RELATIVE) {
-		struct timeval now;
-		gettimeofday(&now, NULL);
-		return show_date_relative(time, tz, &now,
-					  timebuf, sizeof(timebuf));
-	}
-
-	if (mode == DATE_LOCAL)
-		tz = local_tzoffset(time);
-
-	tm = time_to_tm(time, tz);
-	if (!tm)
-		return NULL;
-	if (mode == DATE_SHORT)
-		sprintf(timebuf, "%04d-%02d-%02d", tm->tm_year + 1900,
-				tm->tm_mon + 1, tm->tm_mday);
-	else if (mode == DATE_ISO8601)
-		sprintf(timebuf, "%04d-%02d-%02d %02d:%02d:%02d %+05d",
-				tm->tm_year + 1900,
-				tm->tm_mon + 1,
-				tm->tm_mday,
-				tm->tm_hour, tm->tm_min, tm->tm_sec,
-				tz);
-	else if (mode == DATE_RFC2822)
-		sprintf(timebuf, "%.3s, %d %.3s %d %02d:%02d:%02d %+05d",
-			weekday_names[tm->tm_wday], tm->tm_mday,
-			month_names[tm->tm_mon], tm->tm_year + 1900,
-			tm->tm_hour, tm->tm_min, tm->tm_sec, tz);
-	else
-		sprintf(timebuf, "%.3s %.3s %d %02d:%02d:%02d %d%c%+05d",
-				weekday_names[tm->tm_wday],
-				month_names[tm->tm_mon],
-				tm->tm_mday,
-				tm->tm_hour, tm->tm_min, tm->tm_sec,
-				tm->tm_year + 1900,
-				(mode == DATE_LOCAL) ? 0 : ' ',
-				tz);
-	return timebuf;
 }
 
 /*
@@ -388,7 +278,7 @@ static int is_date(int year, int month, int day, struct tm *now_tm, time_t now, 
 		 * sense to specify timestamp way into the future.  Make
 		 * sure it is not later than ten days from now...
 		 */
-		if (now + 10*24*3600 < specified)
+		if ((specified != -1) && (now + 10*24*3600 < specified))
 			return 0;
 		tm->tm_mon = r->tm_mon;
 		tm->tm_mday = r->tm_mday;
@@ -629,7 +519,7 @@ static int match_object_header_date(const char *date, unsigned long *timestamp, 
 	unsigned long stamp;
 	int ofs;
 
-	if (*date < '0' || '9' <= *date)
+	if (*date < '0' || '9' < *date)
 		return -1;
 	stamp = strtoul(date, &end, 10);
 	if (*end != ' ' || stamp == ULONG_MAX || (end[1] != '+' && end[1] != '-'))
@@ -699,8 +589,14 @@ int parse_date_basic(const char *date, unsigned long *timestamp, int *offset)
 
 	/* mktime uses local timezone */
 	*timestamp = tm_to_time_t(&tm);
-	if (*offset == -1)
-		*offset = ((time_t)*timestamp - mktime(&tm)) / 60;
+	if (*offset == -1) {
+		time_t temp_time = mktime(&tm);
+		if ((time_t)*timestamp > temp_time) {
+			*offset = ((time_t)*timestamp - temp_time) / 60;
+		} else {
+			*offset = -(int)((temp_time - (time_t)*timestamp) / 60);
+		}
+	}
 
 	if (*timestamp == -1)
 		return -1;
@@ -708,6 +604,28 @@ int parse_date_basic(const char *date, unsigned long *timestamp, int *offset)
 	if (!tm_gmt)
 		*timestamp -= *offset * 60;
 	return 0; /* success */
+}
+
+int parse_expiry_date(const char *date, unsigned long *timestamp)
+{
+	int errors = 0;
+
+	if (!strcmp(date, "never") || !strcmp(date, "false"))
+		*timestamp = 0;
+	else if (!strcmp(date, "all") || !strcmp(date, "now"))
+		/*
+		 * We take over "now" here, which usually translates
+		 * to the current timestamp.  This is because the user
+		 * really means to expire everything she has done in
+		 * the past, and by definition reflogs are the record
+		 * of the past, and there is nothing from the future
+		 * to be kept.
+		 */
+		*timestamp = ULONG_MAX;
+	else
+		*timestamp = approxidate_careful(date, &errors);
+
+	return errors;
 }
 
 int parse_date(const char *date, char *result, int maxlen)
