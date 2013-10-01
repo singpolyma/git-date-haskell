@@ -1,5 +1,5 @@
 name:            git-date
-version:         0.2
+version:         0.2.1
 cabal-version:   >= 1.8
 license:         GPL-2
 license-file:    COPYING
