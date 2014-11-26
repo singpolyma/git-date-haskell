@@ -2,15 +2,17 @@
 
 module Data.Time.Git (approxidate, io_approxidate, posixToUTC) where
 
-import Foreign
-import Foreign.C.Types
-import Foreign.C.String
+import           Data.Time
+import           Data.Time.Clock.POSIX
 
-import Data.Time
-import Data.Time.Clock.POSIX
+import           Foreign               hiding (unsafePerformIO)
+import           Foreign.C.String
+import           Foreign.C.Types
 
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.UTF8 as BS (fromString)
+import           System.IO.Unsafe
+
+import qualified Data.ByteString       as BS
+import qualified Data.ByteString.UTF8  as BS (fromString)
 
 foreign import ccall unsafe "date.c approxidate_careful"
 	c_approxidate_careful ::

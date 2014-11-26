@@ -23,6 +23,7 @@ extra-source-files:
         ext/date.c
 
 library
+        GHC-Options: -fPIC
         c-sources: ext/date.c
         include-dirs: ext
 
