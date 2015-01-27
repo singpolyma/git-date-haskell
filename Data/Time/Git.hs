@@ -2,9 +2,10 @@
 
 module Data.Time.Git (approxidate, io_approxidate, posixToUTC) where
 
-import Foreign
+import Foreign hiding (unsafePerformIO)
 import Foreign.C.Types
 import Foreign.C.String
+import System.IO.Unsafe (unsafePerformIO)
 
 import Data.Time
 import Data.Time.Clock.POSIX
