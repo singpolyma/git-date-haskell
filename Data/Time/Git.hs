@@ -1,14 +1,15 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 
-module Data.Time.Git (approxidate, io_approxidate, posixToUTC) where
+module Data.Time.Git (approxidate, approxidateIO) where
 
+import Data.Time (UTCTime)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Foreign hiding (unsafePerformIO)
-import Foreign.C.Types
 import Foreign.C.String
+import Foreign.C.Types
 import System.IO.Unsafe (unsafePerformIO)
-
-import Data.Time
-import Data.Time.Clock.POSIX
+import UnexceptionalIO (Unexceptional)
+import qualified UnexceptionalIO as UIO
 
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.UTF8 as BS (fromString)
@@ -21,22 +22,18 @@ foreign import ccall unsafe "date.c approxidate_careful"
 -- | Parse a date/time string and return Just a Unix timestamp.
 --   Return Nothing if the string could not be interpreted.
 --   If no timezone is in the string, the local timezone is used.
---   This is not in IO and you cannot safely ask it to parse strings like
---   \"now\" and \"yesterday\".
-approxidate :: String -> Maybe Integer
-approxidate = unsafePerformIO . io_approxidate
-
--- | Convert a Unix timestamp to a UTCTime
-posixToUTC :: Integer -> UTCTime
-posixToUTC = posixSecondsToUTCTime . realToFrac
+approxidate :: String -> Maybe UTCTime
+approxidate = unsafePerformIO . approxidateIO
 
 -- | Parse a date/time string and return Just a Unix timestamp.
 --   Return Nothing if the string could not be interpreted.
 --   If no timezone is in the string, the local timezone is used.
---   This is in IO so that you can safely ask it to parse strings like
+--   This is in IO so that you can ask it to parse strings like
 --   \"now\" and \"yesterday\".
-io_approxidate :: String -> IO (Maybe Integer)
-io_approxidate input =
+approxidateIO :: (Unexceptional m) => String -> m (Maybe UTCTime)
+approxidateIO input =
+	(fmap . fmap) (posixSecondsToUTCTime . realToFrac) $
+	UIO.unsafeFromIO $
 	BS.useAsCString (BS.fromString input) (\c_input ->
 		alloca (\c_error_ret -> do
 			poke c_error_ret 0

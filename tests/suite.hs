@@ -4,7 +4,6 @@ import Test.QuickCheck
 
 import Data.Int
 import Data.Time.Git
-import System.Locale
 import Data.Time
 import Data.Time.Clock.POSIX
 import System.IO.Unsafe
@@ -38,9 +37,8 @@ instance Arbitrary DateFormat where
 
 prop_format :: DateFormat -> PositiveTime -> Bool
 prop_format (DateFormat fmt) (PositiveTime time) =
-	approxidate formatted == Just posix
+	approxidate formatted == Just (zonedTimeToUTC time)
 	where
-	posix = floor $ utcTimeToPOSIXSeconds $ zonedTimeToUTC time
 	formatted = formatTime defaultTimeLocale fmt time
 
 tests :: [Test]
